@@ -8,7 +8,7 @@ class ConfluenceExporter:
         self,
         mode,
         site,
-        space=None,
+        space,
         page=None,
         label=None,
         outdir="output",
@@ -43,7 +43,7 @@ class ConfluenceExporter:
         elif self.mode == "pageprops":
             self._export_page_properties()
         else:
-            print(
+            raise Exception(
                 "Invalid mode. Choose from 'single', 'space', 'bylabel', or 'pageprops'."
             )
 
@@ -373,7 +373,7 @@ if __name__ == "__main__":
         required=True,
     )
     parser.add_argument("--site", "-S", type=str, help="Atlassian Site", required=True)
-    parser.add_argument("--space", "-s", type=str, help="Space Key")
+    parser.add_argument("--space", "-s", type=str, help="Space Key", required=True)
     parser.add_argument("--page", "-p", type=int, help="Page ID")
     parser.add_argument("--label", "-l", type=str, help="Page label")
     parser.add_argument(
