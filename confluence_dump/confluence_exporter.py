@@ -1,5 +1,6 @@
 import os.path
 import json
+import signal
 import time
 import logging
 from confluence_dump.myModules import get_page_name, get_body_export_view, get_page_parent, mk_outdirs, get_page_labels, dump_html, get_spaces_all, get_space_title, get_pages_from_space, get_page_properties_children
@@ -29,6 +30,8 @@ class ConfluenceExporter:
         self.rst = rst
         self.showlabels = showlabels
         self.log_interval = log_interval
+        self.interrupted = False
+        signal.signal(signal.SIGINT, self.signal_handler)
 
         # Get API credentials from arguments or environment variables
         self.user_name = api_username or os.environ.get("atlassianUserEmail")
@@ -37,6 +40,10 @@ class ConfluenceExporter:
         # Set up logging
         logging.basicConfig(level=logging.INFO,
                             format="%(asctime)s - %(levelname)s - %(message)s")
+        
+    def signal_handler(self, signal, frame):
+        print('Ctrl+C caught! Exiting gracefully...')
+        self.interrupted = True
 
     def export_single_page(self, page_id, **kwargs):
         start_time = time.time()
@@ -124,6 +131,9 @@ class ConfluenceExporter:
         all_spaces_short = []  # initialize list for less detailed list of spaces
         i = 0
         for n in all_spaces_full:
+            if self.interrupted:
+                logging.warning("Interrupting export space")
+                break
             i = i + 1
             all_spaces_short.append(
                 {  # append the list of spaces
@@ -170,6 +180,9 @@ class ConfluenceExporter:
             all_pages_short = []
             i = 0
             for n in all_pages_full:
+                if self.interrupted:
+                    logging.warning("Interrupting export space")
+                    break
                 i = i + 1
                 all_pages_short.append(
                     {
