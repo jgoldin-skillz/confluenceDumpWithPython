@@ -217,8 +217,7 @@ def dump_html(
     my_emoticons_list = []
     my_outdir_content = arg_outdir_content
     #my_outdir_content = os.path.join(arg_outdir_base,str(arg_page_id) + "-" + str(arg_title))      # this is for html and rst files
-    if not os.path.exists(my_outdir_content):
-        os.mkdir(my_outdir_content)
+    os.makedirs(my_outdir_content, exist_ok=True)
     #myOutdir = os.path.join(arg_outdir,str(arg_page_id) + "-" + str(arg_title))
     my_outdirs = mk_outdirs(arg_outdir_base)        # this is for everything for _images and _static
     my_vars = set_variables()     # create a dict with the 3 folder paths: attach, emoticons, styles

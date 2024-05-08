@@ -44,17 +44,10 @@ outdirAttach = os.path.join(outdir,"images")
 outdirEmoticons = os.path.join(outdir,"images")
 outdirStyles = os.path.join(outdir,"_static")
 
-if not os.path.exists(outdir):
-    os.mkdir(outdir)
-
-if not os.path.exists(outdirAttach):
-    os.mkdir(outdirAttach)
-
-if not os.path.exists(outdirEmoticons):
-    os.mkdir(outdirEmoticons)
-
-if not os.path.exists(outdirStyles):
-    os.mkdir(outdirStyles)
+os.makedirs(outdir, exist_ok=True)
+os.makedirs(outdirAttach, exist_ok=True)
+os.makedirs(outdirEmoticons, exist_ok=True)
+os.makedirs(outdirStyles, exist_ok=True)
 
 if not os.path.exists(outdirStyles + '/site.css'):
     os.system('cp ' + scriptDir + '/styles/site.css "' + outdirStyles + '"')
