@@ -3,3 +3,6 @@ bin/
 output/
 .venv/
 __pycache__/
+
+PDS
+.DS_Store
