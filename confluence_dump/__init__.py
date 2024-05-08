@@ -1,1 +1,1 @@
-from confluence_dump import *
+__all__ = ["confluence_dump"]
