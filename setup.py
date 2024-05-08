@@ -6,4 +6,6 @@ setup(
     url='https://github.com/jgoldin-skillz/confluenceDumpWithPython.git',
     packages=find_packages(),
     install_requires=['beautifulsoup4', 'Pillow', 'pandoc', 'pypandoc', 'requests'],
+    package_data={'': ['styles/confluence.css', 'styles/confluencedefaultpdf.css']},
+    include_package_data=True,
 )
