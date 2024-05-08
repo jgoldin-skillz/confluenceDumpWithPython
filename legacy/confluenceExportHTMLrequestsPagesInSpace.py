@@ -146,7 +146,6 @@ outdirAttach = os.path.join(outdir,attachDir)
 outdirEmoticons = os.path.join(outdir,emoticonsDir)
 outdirStyles = os.path.join(outdir,stylesDir)
 
-
 os.makedirs(outdir, exist_ok=True)
 os.makedirs(outdirAttach, exist_ok=True)
 os.makedirs(outdirEmoticons, exist_ok=True)
