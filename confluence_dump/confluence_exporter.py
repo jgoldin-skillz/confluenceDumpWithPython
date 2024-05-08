@@ -64,8 +64,7 @@ class ConfluenceExporter:
 
         server_url = f"https://{self.site}.atlassian.net/wiki/api/v2/spaces/?limit=250"
 
-        page_url = f"{my_body_export_view['_links']['base']}{
-            my_body_export_view['_links']['webui']}"
+        page_url = f"{my_body_export_view['_links']['base']}"
         page_parent = get_page_parent(
             self.site, page_id, self.user_name, self.api_token
         )
@@ -219,8 +218,8 @@ class ConfluenceExporter:
                     self.site, p["page_id"], self.user_name, self.api_token
                 )
                 # my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
-                mypage_url = f"{my_body_export_view['_links']['base']}{
-                    my_body_export_view['_links']['webui']}"
+                my_page_url = f"{my_body_export_view['_links']['base']}"
+
                 logging.debug(
                     f"dump_html arg sphinx_compatible = {self.sphinx}")
                 dump_html(
