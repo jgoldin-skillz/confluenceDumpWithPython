@@ -155,8 +155,7 @@ class ConfluenceExporter:
                 current_parent = n["homepageId"]
         my_outdir_content = os.path.join(
             self.outdir, f"{space_id}-{space_name}")
-        if not os.path.exists(my_outdir_content):
-            os.mkdir(my_outdir_content)
+        os.makedirs(my_outdir_content, exist_ok=True)
         if self.sphinx is False:
             my_outdir_base = my_outdir_content
 
