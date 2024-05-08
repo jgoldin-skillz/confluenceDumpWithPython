@@ -1,6 +1,6 @@
 import os.path
 import argparse
-import myModules
+import confluence_dump.myModules as myModules
 
 
 class ConfluenceExporter:

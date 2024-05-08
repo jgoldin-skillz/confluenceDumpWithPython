@@ -1,6 +1,6 @@
 import os.path
 import json
-import myModules
+import confluence_dump.myModules as myModules
 import argparse
 
 user_name = os.environ["atlassianUserEmail"]
