@@ -87,8 +87,7 @@ class ConfluenceExporter:
             self.site, page_id, self.user_name, self.api_token
         )
         logging.info(
-            f'Base export folder is "{
-                my_outdir_base}" and the Content goes to "{my_outdir_content}"'
+            f'Base export folder is "{my_outdir_base}" and the Content goes to "{my_outdir_content}"'
         )
         dump_html(
             self.site,
