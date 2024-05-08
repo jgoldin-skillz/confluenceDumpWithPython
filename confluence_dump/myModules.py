@@ -408,8 +408,9 @@ def dump_html(
     rst_file_path = os.path.join(my_outdir_content,rst_file_name)
     try:
         output_rst = pypandoc.convert_file(str(html_file_path), 'rst', format='html',extra_args=['--standalone','--wrap=none','--list-tables'])
-    except:
+    except Exception as e:
         print("There was an issue generating an RST file from the page.")
+        print(e)
     else:
         ##
         ## RST Header with Page Metadata
