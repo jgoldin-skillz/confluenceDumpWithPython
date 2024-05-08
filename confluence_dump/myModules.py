@@ -57,21 +57,12 @@ def mk_outdirs(arg_outdir="output"):       # setting default to output
     outdir_attach = outdir_list[0]
     outdir_emoticons = outdir_list[1]
     outdir_styles = outdir_list[2]
-
-    if not os.path.exists(arg_outdir):
-        os.mkdir(arg_outdir)
-
-    if not os.path.exists(outdir_attach):
-        os.mkdir(outdir_attach)
-
-    if not os.path.exists(outdir_emoticons):
-        os.mkdir(outdir_emoticons)
-
-    if not os.path.exists(outdir_styles):
-        os.mkdir(outdir_styles)
-
-    if not os.path.exists(outdir_styles + '/confluence.css'):
-        shutil.copy(f"{script_dir}/styles/confluence.css", f"{outdir_styles}confluence.css")
+    os.makedirs(arg_outdir, exist_ok=True)
+    os.makedirs(outdir_attach, exist_ok=True)
+    os.makedirs(outdir_emoticons, exist_ok=True)
+    os.makedirs(outdir_styles, exist_ok=True)
+    if not os.path.exists(os.path.join(outdir_styles, 'confluence.css')):
+        shutil.copy(os.path.join(script_dir, "styles", "confluence.css"), os.path.join(outdir_styles, "confluence.css"))
     return(outdir_list)
 
 def get_space_title(arg_site,arg_space_id,arg_username,arg_api_token):
