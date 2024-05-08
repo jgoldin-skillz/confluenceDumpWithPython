@@ -108,8 +108,7 @@ class ConfluenceExporter:
         )
         end_time = time.time()
         elapsed_time = end_time - start_time
-        logging.info(f"Done! Exporting single page took {
-                     elapsed_time:.2f} seconds.")
+        logging.info(f"Done! Exporting single page took {elapsed_time:.2f} seconds.")
 
     def export_space(self, **kwargs):
         start_time = time.time()
@@ -191,8 +190,7 @@ class ConfluenceExporter:
                 if now - last_log_time >= self.log_interval:
                     estimated_time_remaining = (
                         now - start_time) / page_counter * (total_pages - page_counter)
-                    logging.info(f"Exporting page {
-                                 page_counter}/{total_pages} - Estimated time remaining: {estimated_time_remaining:.2f} seconds")
+                    logging.info(f"Exporting page {page_counter}/{total_pages} - Estimated time remaining: {estimated_time_remaining:.2f} seconds")
                     last_log_time = now
 
                 my_body_export_view = get_body_export_view(
@@ -210,9 +208,7 @@ class ConfluenceExporter:
                     .replace(" ", "_")
                     # added .replace(" ","_") so that filenames have _ as a separator
                 )
-                logging.debug(
-                    f"Getting page #{
-                        page_counter}/{len(all_pages_short)}, {my_body_export_view_title}, {p['page_id']}"
+                logging.debug(f"Getting page #{page_counter}/{len(all_pages_short)}, {my_body_export_view_title}, {p['page_id']}"
                 )
                 my_body_export_view_labels = get_page_labels(
                     self.site, p["page_id"], self.user_name, self.api_token
@@ -220,8 +216,7 @@ class ConfluenceExporter:
                 # my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
                 my_page_url = f"{my_body_export_view['_links']['base']}"
 
-                logging.debug(
-                    f"dump_html arg sphinx_compatible = {self.sphinx}")
+                logging.debug(f"dump_html arg sphinx_compatible = {self.sphinx}")
                 dump_html(
                     self.site,
                     my_body_export_view_html,
