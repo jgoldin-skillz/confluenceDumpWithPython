@@ -242,7 +242,7 @@ class ConfluenceExporter:
                     arg_html_output=self.html,
                     arg_rst_output=self.rst,
                 )
-                dumped_file_paths[my_body_export_view_title] = (my_body_export_view_name, p["page_id"], url, dumped_file_path, self.space, self.site)
+                dumped_file_paths[my_body_export_view_title] = (p["page_id"], url, dumped_file_path, self.space, self.site)
         end_time = time.time()
         elapsed_time = end_time - start_time
         logging.info(f"Done! Exporting space took {elapsed_time:.2f} seconds.")
