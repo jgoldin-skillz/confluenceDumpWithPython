@@ -40,7 +40,7 @@ class ConfluenceExporter:
         # Set up logging
         logging.basicConfig(level=logging.INFO,
                             format="%(asctime)s - %(levelname)s - %(message)s")
-        
+
     def signal_handler(self, signal, frame):
         print('Ctrl+C caught! Exiting gracefully...')
         self.interrupted = True
@@ -94,9 +94,10 @@ class ConfluenceExporter:
             self.site, page_id, self.user_name, self.api_token
         )
         logging.info(
-            f'Base export folder is "{my_outdir_base}" and the Content goes to "{my_outdir_content}"'
+            f'Base export folder is "{
+                my_outdir_base}" and the Content goes to "{my_outdir_content}"'
         )
-        dump_html(
+        dumped_file_path = dump_html(
             self.site,
             my_body_export_view_html,
             my_body_export_view_title,
@@ -114,7 +115,9 @@ class ConfluenceExporter:
         )
         end_time = time.time()
         elapsed_time = end_time - start_time
-        logging.info(f"Done! Exporting single page took {elapsed_time:.2f} seconds.")
+        logging.info(f"Done! Exporting single page took {
+                     elapsed_time:.2f} seconds.")
+        return page_url, dumped_file_path
 
     def export_space(self, **kwargs):
         start_time = time.time()
@@ -195,13 +198,15 @@ class ConfluenceExporter:
             logging.info(f"{len(all_pages_short)} pages to export")
             page_counter = 0
             total_pages = len(all_pages_short)
+            dumped_file_paths = {}
             for p in all_pages_short:
                 page_counter += 1
                 now = time.time()
                 if now - last_log_time >= self.log_interval:
                     estimated_time_remaining = (
                         now - start_time) / page_counter * (total_pages - page_counter)
-                    logging.info(f"Exporting page {page_counter}/{total_pages} - Estimated time remaining: {estimated_time_remaining:.2f} seconds")
+                    logging.info(f"Exporting page {
+                                 page_counter}/{total_pages} - Estimated time remaining: {estimated_time_remaining:.2f} seconds")
                     last_log_time = now
 
                 my_body_export_view = get_body_export_view(
@@ -220,15 +225,16 @@ class ConfluenceExporter:
                     # added .replace(" ","_") so that filenames have _ as a separator
                 )
                 logging.debug(f"Getting page #{page_counter}/{len(all_pages_short)}, {my_body_export_view_title}, {p['page_id']}"
-                )
+                              )
                 my_body_export_view_labels = get_page_labels(
                     self.site, p["page_id"], self.user_name, self.api_token
                 )
                 # my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
                 my_page_url = f"{my_body_export_view['_links']['base']}"
 
-                logging.debug(f"dump_html arg sphinx_compatible = {self.sphinx}")
-                dump_html(
+                logging.debug(
+                    f"dump_html arg sphinx_compatible = {self.sphinx}")
+                dumped_file_path = dump_html(
                     self.site,
                     my_body_export_view_html,
                     my_body_export_view_title,
@@ -244,6 +250,8 @@ class ConfluenceExporter:
                     arg_html_output=self.html,
                     arg_rst_output=self.rst,
                 )
+                dumped_file_paths[my_page_url] = dumped_file_path
         end_time = time.time()
         elapsed_time = end_time - start_time
         logging.info(f"Done! Exporting space took {elapsed_time:.2f} seconds.")
+        return dumped_file_paths
