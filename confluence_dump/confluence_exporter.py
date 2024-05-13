@@ -93,8 +93,7 @@ class ConfluenceExporter:
             self.site, page_id, self.user_name, self.api_token
         )
         logging.info(
-            f'Base export folder is "{
-                my_outdir_base}" and the Content goes to "{my_outdir_content}"'
+            f'Base export folder is "{my_outdir_base}" and the Content goes to "{my_outdir_content}"'
         )
         dumped_file_path = dump_html(
             self.site,
@@ -114,8 +113,7 @@ class ConfluenceExporter:
         )
         end_time = time.time()
         elapsed_time = end_time - start_time
-        logging.info(f"Done! Exporting single page took {
-                     elapsed_time:.2f} seconds.")
+        logging.info(f"Done! Exporting single page took {elapsed_time:.2f} seconds.")
         return page_url, dumped_file_path
 
     def export_space(self, **kwargs):
@@ -210,9 +208,7 @@ class ConfluenceExporter:
                 my_body_export_view = get_body_export_view(
                     self.site, p["page_id"], self.user_name, self.api_token
                 ).json()
-                my_body_export_view_html = my_body_export_view["body"]["export_view"][
-                    "value"
-                ]
+                my_body_export_view_html = my_body_export_view["body"]["export_view"]["value"]
                 my_body_export_view_name = p["pageTitle"]
                 my_body_export_view_title = (
                     p["pageTitle"]
@@ -229,8 +225,7 @@ class ConfluenceExporter:
                 # my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
                 my_page_url = f"{my_body_export_view['_links']['base']}"
 
-                logging.debug(
-                    f"dump_html arg sphinx_compatible = {self.sphinx}")
+                logging.debug(f"dump_html arg sphinx_compatible = {self.sphinx}")
                 dumped_file_path = dump_html(
                     self.site,
                     my_body_export_view_html,
