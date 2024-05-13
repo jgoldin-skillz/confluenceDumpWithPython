@@ -401,7 +401,7 @@ def dump_html(
     # convert html to rst
     #
     if not arg_rst_output:
-        return
+        return page_url, html_file_path
     
     rst_file_name = f"{html_file_name.replace('html','rst')}"
     rst_file_path = os.path.join(my_outdir_content,rst_file_name)
@@ -445,3 +445,4 @@ def dump_html(
         print(f"Exported RST file: {rst_file_path}")
         if arg_html_output == False:
             os.remove(html_file_path)
+        return page_url, rst_file_path
