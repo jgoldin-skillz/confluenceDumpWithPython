@@ -50,6 +50,8 @@ class ConfluenceExporter:
 
     def signal_handler(self, signal, frame):
         print('Ctrl+C caught! Exiting gracefully...')
+        global interrupted
+        interrupted = True
         self.interrupted = True
 
     def export_single_page(self, page_id, **kwargs):
@@ -150,6 +152,7 @@ class ConfluenceExporter:
         filtered_pages_count = 0
         global page_counter
         page_counter = 0
+        global interrupted
         # Update attributes with kwargs if provided
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -162,9 +165,9 @@ class ConfluenceExporter:
         all_spaces_short = []  # initialize list for less detailed list of spaces
         i = 0
         for n in all_spaces_full:
-            if self.interrupted:
+            if interrupted or self.interrupted:
                 logging.warning("Interrupting export of space")
-                break
+                return
             i = i + 1
             all_spaces_short.append(
                 {  # append the list of spaces
@@ -212,7 +215,7 @@ class ConfluenceExporter:
             for n in all_pages_full:
                 if self.interrupted:
                     logging.warning("Interrupting export of space")
-                    break
+                    return
                 i = i + 1
                 all_pages_short.append(
                     {
@@ -238,7 +241,8 @@ class ConfluenceExporter:
                 global last_log_time
                 global filtered_pages_count
                 global page_counter
-                if self.interrupted:
+                global interrupted
+                if interrupted or self.interrupted:
                     return None
                 now = time.time()
                 if now - last_log_time >= self.log_interval:
@@ -272,7 +276,7 @@ class ConfluenceExporter:
             for p in filtered_pages:
                 if self.interrupted:
                     logging.warning("Interrupting export of space")
-                    break
+                    return
                 page_counter += 1
                 now = time.time()
                 
