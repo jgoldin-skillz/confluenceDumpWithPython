@@ -223,11 +223,11 @@ class ConfluenceExporter:
                 last_modified_date = datetime.fromisoformat(last_modified)
                 
                 if self.start_date and last_modified_date < self.start_date:
-                    logging.info(f"Page {p["page_id"]} was last modified on {last_modified_date}, which is before the start date {self.start_date}. Skipping.")
+                    logging.info(f"Page {p['page_id']} was last modified on {last_modified_date}, which is before the start date {self.start_date}. Skipping.")
                     return
                 
                 if self.end_date and last_modified_date > self.end_date:
-                    logging.info(f"Page {p["page_id"]} was last modified on {last_modified_date}, which is after the end date {self.end_date}. Skipping.")
+                    logging.info(f"Page {p['page_id']} was last modified on {last_modified_date}, which is after the end date {self.end_date}. Skipping.")
                     return
                 
                 if now - last_log_time >= self.log_interval:
