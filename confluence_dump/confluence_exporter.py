@@ -23,7 +23,7 @@ class ConfluenceExporter:
         showlabels=False,
         api_username=None,
         api_token=None,
-        log_interval=10,  # Log progress every 10 seconds
+        log_interval=5,  # Log progress every 5 seconds
         start_date: datetime = None,
         end_date: datetime = None,
         workers: int = 4
