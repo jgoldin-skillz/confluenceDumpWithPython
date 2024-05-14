@@ -148,6 +148,8 @@ class ConfluenceExporter:
         last_log_time = start_time
         global filtered_pages_count
         filtered_pages_count = 0
+        global page_counter
+        page_counter = 0
         # Update attributes with kwargs if provided
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -222,6 +224,7 @@ class ConfluenceExporter:
                 )
             # put it all together
             logging.info(f"{len(all_pages_short)} pages to export")
+            
             page_counter = 0
             total_pages = len(all_pages_short)
             dumped_file_paths = {}
@@ -234,6 +237,7 @@ class ConfluenceExporter:
             def filter_page(p):
                 global last_log_time
                 global filtered_pages_count
+                global page_counter
                 if self.interrupted:
                     return None
                 now = time.time()
@@ -247,6 +251,7 @@ class ConfluenceExporter:
                 )
                 last_modified = parser.isoparse(last_modified_str).replace(tzinfo=timezone.utc)
                 
+                page_counter += 1
                 if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
                     filtered_pages_count += 1
                     return p
