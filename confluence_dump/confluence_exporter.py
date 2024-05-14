@@ -3,7 +3,7 @@ import json
 import signal
 import time
 import logging
-from datetime import datetime
+from dateutil import parser
 from confluence_dump.myModules import get_page_last_modified, get_page_name, get_body_export_view, get_page_parent, mk_outdirs, get_page_labels, dump_html, get_spaces_all, get_space_title, get_pages_from_space, get_page_properties_children
 
 
@@ -220,7 +220,7 @@ class ConfluenceExporter:
                 last_modified = get_page_last_modified(
                     self.site, p["page_id"], self.user_name, self.api_token
                 )
-                last_modified_date = datetime.fromisoformat(last_modified.replace('Z', '+00:00'))
+                last_modified_date = parser.isoparse(last_modified)
                 
                 if self.start_date and last_modified_date < self.start_date:
                     logging.info(f"Page {p['page_id']} was last modified on {last_modified_date}, which is before the start date {self.start_date}. Skipping.")
