@@ -116,22 +116,26 @@ class ConfluenceExporter:
         logging.info(
             f'Base export folder is "{my_outdir_base}" and the Content goes to "{my_outdir_content}"'
         )
-        url, dumped_file_path = dump_html(
-            self.site,
-            my_body_export_view_html,
-            my_body_export_view_title,
-            page_id,
-            my_outdir_base,
-            my_outdir_content,
-            my_page_labels,
-            page_parent,
-            self.user_name,
-            self.api_token,
-            self.sphinx,
-            self.tags,
-            arg_html_output=self.html,
-            arg_rst_output=self.rst,
-        )
+        try:
+            url, dumped_file_path = dump_html(
+                self.site,
+                my_body_export_view_html,
+                my_body_export_view_title,
+                page_id,
+                my_outdir_base,
+                my_outdir_content,
+                my_page_labels,
+                page_parent,
+                self.user_name,
+                self.api_token,
+                self.sphinx,
+                self.tags,
+                arg_html_output=self.html,
+                arg_rst_output=self.rst,
+            )
+        except Exception as e:
+            logging.error(f"Error exporting page {page_id}: {e}")
+            return None, None, None, None, None, None
         end_time = time.time()
         elapsed_time = end_time - start_time
         logging.info(f"Done! Exporting single page took {elapsed_time:.2f} seconds.")
@@ -240,7 +244,7 @@ class ConfluenceExporter:
                     
                     if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
                         filtered_pages.append(p)
-                    
+
                     page_counter += 1
 
                 total_pages = len(filtered_pages)
@@ -249,7 +253,7 @@ class ConfluenceExporter:
                 filtered_pages = all_pages_short
                 logging.info("No date filtering applied.")
 
-            logging.info(f"Starting export of {total_pages} pages")
+            logging.info(f"Starting export of {len(filtered_pages)} pages")
             for p in filtered_pages:
                 if self.interrupted:
                     logging.warning("Interrupting export of space")
@@ -284,23 +288,27 @@ class ConfluenceExporter:
                 my_page_url = f"{my_body_export_view['_links']['base']}"
 
                 logging.debug(f"dump_html arg sphinx_compatible = {self.sphinx}")
-                url, dumped_file_path = dump_html(
-                    self.site,
-                    my_body_export_view_html,
-                    my_body_export_view_title,
-                    p["page_id"],
-                    my_outdir_base,
-                    my_outdir_content,
-                    my_body_export_view_labels,
-                    p["parentId"],
-                    self.user_name,
-                    self.api_token,
-                    self.sphinx,
-                    self.tags,
-                    arg_html_output=self.html,
-                    arg_rst_output=self.rst,
-                )
-                dumped_file_paths[my_body_export_view_title] = (p["page_id"], url, dumped_file_path, self.space, self.site)
+                try:
+                    url, dumped_file_path = dump_html(
+                        self.site,
+                        my_body_export_view_html,
+                        my_body_export_view_title,
+                        p["page_id"],
+                        my_outdir_base,
+                        my_outdir_content,
+                        my_body_export_view_labels,
+                        p["parentId"],
+                        self.user_name,
+                        self.api_token,
+                        self.sphinx,
+                        self.tags,
+                        arg_html_output=self.html,
+                        arg_rst_output=self.rst,
+                    )
+                    dumped_file_paths[my_body_export_view_title] = (p["page_id"], url, dumped_file_path, self.space, self.site)
+                except Exception as e:
+                    logging.error(f"Error exporting page {p['page_id']}: {e}")
+                    continue
         end_time = time.time()
         elapsed_time = end_time - start_time
         logging.info(f"Done! Exporting space took {elapsed_time:.2f} seconds.")
