@@ -5,6 +5,7 @@ import time
 import logging
 from dateutil import parser
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timezone
 from confluence_dump.myModules import get_page_last_modified, get_page_name, get_body_export_view, get_page_parent, mk_outdirs, get_page_labels, dump_html, get_spaces_all, get_space_title, get_pages_from_space, get_page_properties_children
 
@@ -226,7 +227,7 @@ class ConfluenceExporter:
             start_time = time.time()
             last_log_time = start_time
             page_counter = 0
-            from concurrent.futures import ThreadPoolExecutor
+            filtered_pages_count = 0
 
             def filter_page(p):
                 global last_log_time
@@ -245,10 +246,10 @@ class ConfluenceExporter:
                 last_modified = parser.isoparse(last_modified_str).replace(tzinfo=timezone.utc)
                 
                 if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
+                    filtered_pages_count += 1
                     return p
                 return None
 
-            filtered_pages_count = len(filtered_pages)
             if self.start_date or self.end_date:
                 with ThreadPoolExecutor(max_workers=4) as executor:
                     results = list(executor.map(filter_page, all_pages_short))
