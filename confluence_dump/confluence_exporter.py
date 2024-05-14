@@ -59,6 +59,7 @@ class ConfluenceExporter:
         global interrupted
         interrupted = True
         self.interrupted = True
+        exit(1)
 
     def export_single_page(self, page_id, **kwargs):
         start_time = time.time()
