@@ -89,8 +89,6 @@ class ConfluenceExporter:
             .replace(":", "-")
         )
 
-        server_url = f"https://{self.site}.atlassian.net/wiki/api/v2/spaces/?limit=250"
-
         page_url = f"{my_body_export_view['_links']['base']}"
         page_parent = get_page_parent(
             self.site, page_id, self.user_name, self.api_token
@@ -141,9 +139,175 @@ class ConfluenceExporter:
         logging.info(f"Done! Exporting single page took {elapsed_time:.2f} seconds.")
         return my_body_export_view_title, page_id, url, dumped_file_path, self.space, self.site
 
-    def export_space(self, **kwargs):
+    def _export_space(self, space_key, all_spaces_short):
         start_time = time.time()
         last_log_time = start_time
+        
+        for n in all_spaces_short:
+            if self.interrupted:
+                logging.warning("Interrupting export of space")
+                return {}
+            if (
+                (n["key"] == space_key)
+                or n["key"] == str.upper(space_key)
+                or n["key"] == str.lower(space_key)
+            ):
+                logging.info("Found space: " + n["key"])
+                space_id = n["id"]
+                space_name = n["name"]
+                current_parent = n["homepageId"]
+                break # Stop iterating once space is found
+        else:
+            logging.error("Could not find Space Key in this site")
+            return {}
+
+        my_outdir_content = os.path.join(
+            self.outdir, f"{space_id}-{space_name}"
+        )
+        os.makedirs(my_outdir_content, exist_ok=True)
+        if self.sphinx is False:
+            my_outdir_base = my_outdir_content
+
+        space_title = get_space_title(
+            self.site, space_id, self.user_name, self.api_token
+        )
+
+        # get list of pages from space
+        all_pages_full = get_pages_from_space(
+            self.site, space_id, self.user_name, self.api_token
+        )
+        all_pages_short = []
+        i = 0
+        for n in all_pages_full:
+            if self.interrupted:
+                logging.warning("Interrupting export of space")
+                return {}
+            i = i + 1
+            all_pages_short.append(
+                {
+                    "page_id": n["id"],
+                    "pageTitle": n["title"],
+                    "parentId": n["parentId"],
+                    "space_id": n["spaceId"],
+                }
+            )
+
+        # put it all together
+        logging.info(f"{len(all_pages_short)} pages to export")
+        page_counter = 0
+        total_pages = len(all_pages_short)
+        dumped_file_paths = {}
+
+        # Filter pages based on date criteria if start_date or end_date are provided
+        if self.start_date or self.end_date:
+            filtered_pages = []
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = {executor.submit(self._filter_page, p): p for p in all_pages_short}
+                for future in as_completed(futures):
+                    p = futures[future]
+                    if self.interrupted:
+                        logging.warning("Interrupting export of space")
+                        return {}
+                    result = future.result()
+                    if result is not None:
+                        filtered_pages.append(result)
+                        page_counter += 1
+                        now = time.time()
+                        if now - last_log_time >= self.log_interval:
+                            estimated_time_remaining = (
+                                now - start_time) / page_counter * (total_pages - page_counter)
+                            logging.info(f"Filtering page {page_counter}/{total_pages} - Estimated time remaining: {estimated_time_remaining:.2f} seconds")
+                            last_log_time = now
+
+            total_pages = len(filtered_pages)
+            logging.info(f"{total_pages} pages meet the date criteria and will be processed.")
+        else:
+            filtered_pages = all_pages_short
+            logging.info("No date filtering applied.")
+
+        page_counter = 0
+        logging.info(f"Starting export of {len(filtered_pages)} pages")
+        start_time = time.time()
+        last_log_time = start_time
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {executor.submit(self._export_page, p, my_outdir_base, my_outdir_content): p for p in filtered_pages}
+            for future in as_completed(futures):
+                p = futures[future]
+                if self.interrupted:
+                    logging.warning("Interrupting export of space")
+                    return {}
+                result = future.result()
+                if result is not None:
+                    page_counter += 1
+                    dumped_file_paths.update(result)
+                    now = time.time()
+                    if now - last_log_time >= self.log_interval:
+                        estimated_time_remaining = (
+                            now - start_time) / page_counter * (total_pages - page_counter)
+                        logging.info(f"Exporting page {page_counter}/{total_pages} - Estimated time remaining: {estimated_time_remaining:.2f} seconds")
+                        last_log_time = now
+        
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        logging.info(f"Done! Exporting space took {elapsed_time:.2f} seconds.")
+        return dumped_file_paths
+
+    def _filter_page(self, p):
+        last_modified_str = get_page_last_modified(
+            self.site, p["page_id"], self.user_name, self.api_token
+        )
+        last_modified = parser.isoparse(last_modified_str).replace(tzinfo=timezone.utc)
+        
+        if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
+            return p
+        return None
+    
+    def _export_page(self, p, my_outdir_base, my_outdir_content):
+        my_body_export_view = get_body_export_view(
+            self.site, p["page_id"], self.user_name, self.api_token
+        ).json()
+        my_body_export_view_html = my_body_export_view["body"]["export_view"]["value"]
+        my_body_export_view_name = p["pageTitle"]
+        my_body_export_view_title = (
+            p["pageTitle"]
+            .replace("/", "-")
+            .replace(",", "")
+            .replace("&", "And")
+            .replace(" ", "_")
+        )
+        logging.debug(f"Getting page {my_body_export_view_title}, {p['page_id']}")
+        my_body_export_view_labels = get_page_labels(
+            self.site, p["page_id"], self.user_name, self.api_token
+        )
+        my_page_url = f"{my_body_export_view['_links']['base']}"
+
+        try:
+            url, dumped_file_path = dump_html(
+                self.site,
+                my_body_export_view_html,
+                my_body_export_view_title,
+                p["page_id"],
+                my_outdir_base,
+                my_outdir_content,
+                my_body_export_view_labels,
+                p["parentId"],
+                self.user_name,
+                self.api_token,
+                self.sphinx,
+                self.tags,
+                arg_html_output=self.html,
+                arg_rst_output=self.rst,
+            )
+            return {my_body_export_view_title: (p["page_id"], url, dumped_file_path, self.space, self.site)}
+        except Exception as e:
+            logging.error(f"Error exporting page {p['page_id']}: {e}")
+            return None
+
+    def export_space(self, **kwargs):
+        start_time = time.time()
         # Update attributes with kwargs if provided
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -157,8 +321,8 @@ class ConfluenceExporter:
         i = 0
         for n in all_spaces_full:
             if self.interrupted:
-                logging.warning("Interrupting export of space")
-                break
+                logging.warning("Interrupting export of spaces")
+                return {}
             i = i + 1
             all_spaces_short.append(
                 {  # append the list of spaces
@@ -169,149 +333,7 @@ class ConfluenceExporter:
                     "spaceDescription": n["description"],
                 }
             )
-            if (
-                (n["key"] == space_key)
-                or n["key"] == str.upper(space_key)
-                or n["key"] == str.lower(space_key)
-            ):
-                logging.info("Found space: " + n["key"])
-                space_id = n["id"]
-                space_name = n["name"]
-                current_parent = n["homepageId"]
-        my_outdir_content = os.path.join(
-            self.outdir, f"{space_id}-{space_name}")
-        os.makedirs(my_outdir_content, exist_ok=True)
-        if self.sphinx is False:
-            my_outdir_base = my_outdir_content
-
-        # print("my_outdir_base: " + my_outdir_base)
-        # print("my_outdir_content: " + my_outdir_content)
-
-        if (
-            space_key == "" or space_key is None
-        ):  # if the supplied space key can't be found
-            logging.error("Could not find Space Key in this site")
-        else:
-            space_title = get_space_title(
-                self.site, space_id, self.user_name, self.api_token
-            )
-            #
-            # get list of pages from space
-            #
-            all_pages_full = get_pages_from_space(
-                self.site, space_id, self.user_name, self.api_token
-            )
-            all_pages_short = []
-            i = 0
-            for n in all_pages_full:
-                if self.interrupted:
-                    logging.warning("Interrupting export of space")
-                    break
-                i = i + 1
-                all_pages_short.append(
-                    {
-                        "page_id": n["id"],
-                        "pageTitle": n["title"],
-                        "parentId": n["parentId"],
-                        "space_id": n["spaceId"],
-                    }
-                )
-            # put it all together
-            logging.info(f"{len(all_pages_short)} pages to export")
-            page_counter = 0
-            total_pages = len(all_pages_short)
-            dumped_file_paths = {}
-            # Filter pages based on date criteria if start_date or end_date are provided
-            start_time = time.time()
-            last_log_time = start_time
-            page_counter = 0
-            from concurrent.futures import ThreadPoolExecutor
-
-            def filter_page(p):
-                if self.interrupted:
-                    return None
-                now = time.time()
-                if now - last_log_time >= self.log_interval:
-                    estimated_time_remaining = (now - start_time) / (page_counter + 1) * (total_pages - page_counter - 1)
-                    logging.info(f"Processing page {page_counter}/{total_pages} for {len(filtered_pages)} filtered pages so far. Time elapsed: {now - start_time:.2f} seconds, estimated time remaining: {estimated_time_remaining:.2f} seconds")
-                    last_log_time = now
-
-                last_modified_str = get_page_last_modified(
-                    self.site, p["page_id"], self.user_name, self.api_token
-                )
-                last_modified = parser.isoparse(last_modified_str).replace(tzinfo=timezone.utc)
-                
-                if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
-                    return p
-                return None
-
-            if self.start_date or self.end_date:
-                with ThreadPoolExecutor(max_workers=4) as executor:
-                    results = list(executor.map(filter_page, all_pages_short))
-                filtered_pages = [page for page in results if page is not None]
-                total_pages = len(filtered_pages)
-                logging.info(f"{total_pages} pages meet the date criteria and will be processed.")
-            else:
-                filtered_pages = all_pages_short
-                logging.info("No date filtering applied.")
-
-            logging.info(f"Starting export of {len(filtered_pages)} pages")
-            page_counter = 0
-            for p in filtered_pages:
-                if self.interrupted:
-                    logging.warning("Interrupting export of space")
-                    break
-                page_counter += 1
-                now = time.time()
-                
-                if now - last_log_time >= self.log_interval:
-                    estimated_time_remaining = (
-                        now - start_time) / page_counter * (total_pages - page_counter)
-                    logging.info(f"Exporting page {page_counter}/{total_pages} - Estimated time remaining: {estimated_time_remaining:.2f} seconds")
-                    last_log_time = now
-
-                my_body_export_view = get_body_export_view(
-                    self.site, p["page_id"], self.user_name, self.api_token
-                ).json()
-                my_body_export_view_html = my_body_export_view["body"]["export_view"]["value"]
-                my_body_export_view_name = p["pageTitle"]
-                my_body_export_view_title = (
-                    p["pageTitle"]
-                    .replace("/", "-")
-                    .replace(",", "")
-                    .replace("&", "And")
-                    .replace(" ", "_")
-                    # added .replace(" ","_") so that filenames have _ as a separator
-                )
-                logging.debug(f"Getting page #{page_counter}/{len(all_pages_short)}, {my_body_export_view_title}, {p['page_id']}")
-                my_body_export_view_labels = get_page_labels(
-                    self.site, p["page_id"], self.user_name, self.api_token
-                )
-                # my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
-                my_page_url = f"{my_body_export_view['_links']['base']}"
-
-                logging.debug(f"dump_html arg sphinx_compatible = {self.sphinx}")
-                try:
-                    url, dumped_file_path = dump_html(
-                        self.site,
-                        my_body_export_view_html,
-                        my_body_export_view_title,
-                        p["page_id"],
-                        my_outdir_base,
-                        my_outdir_content,
-                        my_body_export_view_labels,
-                        p["parentId"],
-                        self.user_name,
-                        self.api_token,
-                        self.sphinx,
-                        self.tags,
-                        arg_html_output=self.html,
-                        arg_rst_output=self.rst,
-                    )
-                    dumped_file_paths[my_body_export_view_title] = (p["page_id"], url, dumped_file_path, self.space, self.site)
-                except Exception as e:
-                    logging.error(f"Error exporting page {p['page_id']}: {e}")
-                    continue
+        dumped_file_paths = self._export_space(space_key, all_spaces_short)
         end_time = time.time()
         elapsed_time = end_time - start_time
         logging.info(f"Done! Exporting space took {elapsed_time:.2f} seconds.")
@@ -320,7 +342,6 @@ class ConfluenceExporter:
 
     def export_spaces(self, space_keys, **kwargs):
         start_time = time.time()
-        last_log_time = start_time
         # Update attributes with kwargs if provided
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -328,174 +349,31 @@ class ConfluenceExporter:
         logging.info(f"Exporting multiple spaces (Sphinx set to {self.sphinx})")
         
         all_dumped_file_paths = {}
-        for space_key in space_keys:
-            logging.info(f"Exporting space {space_key}")
-            all_spaces_full = get_spaces_all(
-                self.site, self.user_name, self.api_token
-            )  # get a dump of all spaces
-            all_spaces_short = []  # initialize list for less detailed list of spaces
-            i = 0
-            for n in all_spaces_full:
-                if self.interrupted:
-                    logging.warning("Interrupting export of space")
-                    break
-                i = i + 1
-                all_spaces_short.append(
-                    {  # append the list of spaces
-                        "space_key": n["key"],
-                        "space_id": n["id"],
-                        "space_name": n["name"],
-                        "homepage_id": n["homepageId"],
-                        "spaceDescription": n["description"],
-                    }
-                )
-                if (
-                    (n["key"] == space_key)
-                    or n["key"] == str.upper(space_key)
-                    or n["key"] == str.lower(space_key)
-                ):
-                    logging.info("Found space: " + n["key"])
-                    space_id = n["id"]
-                    space_name = n["name"]
-                    current_parent = n["homepageId"]
-            my_outdir_content = os.path.join(
-                self.outdir, f"{space_id}-{space_name}"
+        all_spaces_full = get_spaces_all(
+            self.site, self.user_name, self.api_token
+        )  # get a dump of all spaces
+        all_spaces_short = []  # initialize list for less detailed list of spaces
+        i = 0
+        for n in all_spaces_full:
+            if self.interrupted:
+                logging.warning("Interrupting export of spaces")
+                return {}
+            i = i + 1
+            all_spaces_short.append(
+                {  # append the list of spaces
+                    "space_key": n["key"],
+                    "space_id": n["id"],
+                    "space_name": n["name"],
+                    "homepage_id": n["homepageId"],
+                    "spaceDescription": n["description"],
+                }
             )
-            os.makedirs(my_outdir_content, exist_ok=True)
-            if self.sphinx is False:
-                my_outdir_base = my_outdir_content
-
-            # print("my_outdir_base: " + my_outdir_base)
-            # print("my_outdir_content: " + my_outdir_content)
-
-            if (
-                space_key == "" or space_key is None
-            ):  # if the supplied space key can't be found
-                logging.error("Could not find Space Key in this site")
-            else:
-                space_title = get_space_title(
-                    self.site, space_id, self.user_name, self.api_token
-                )
-                #
-                # get list of pages from space
-                #
-                all_pages_full = get_pages_from_space(
-                    self.site, space_id, self.user_name, self.api_token
-                )
-                all_pages_short = []
-                i = 0
-                for n in all_pages_full:
-                    if self.interrupted:
-                        logging.warning("Interrupting export of space")
-                        break
-                    i = i + 1
-                    all_pages_short.append(
-                        {
-                            "page_id": n["id"],
-                            "pageTitle": n["title"],
-                            "parentId": n["parentId"],
-                            "space_id": n["spaceId"],
-                        }
-                    )
-                # put it all together
-                logging.info(f"{len(all_pages_short)} pages to export")
-                page_counter = 0
-                total_pages = len(all_pages_short)
-                dumped_file_paths = {}
-                # Filter pages based on date criteria if start_date or end_date are provided
-                start_time = time.time()
-                last_log_time = start_time
-                page_counter = 0
-                if self.start_date or self.end_date:
-                    filtered_pages = []
-                    from concurrent.futures import ThreadPoolExecutor
-
-                    def process_page(p):
-                        if self.interrupted:
-                            logging.warning("Interrupting export of space")
-                            return None
-                        now = time.time()
-                        if now - last_log_time >= self.log_interval:
-                            estimated_time_remaining = (now - start_time) / (page_counter + 1) * (total_pages - page_counter - 1)
-                            logging.info(f"Processing page {page_counter}/{total_pages} for {len(filtered_pages)} filtered pages so far. Time elapsed: {now - start_time:.2f} seconds, estimated time remaining: {estimated_time_remaining:.2f} seconds")
-                            last_log_time = now
-
-                        last_modified_str = get_page_last_modified(
-                            self.site, p["page_id"], self.user_name, self.api_token
-                        )
-                        last_modified = parser.isoparse(last_modified_str).replace(tzinfo=timezone.utc)
-                        
-                        if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
-                            return p
-                        return None
-
-                    with ThreadPoolExecutor(max_workers=4) as executor:
-                        results = executor.map(process_page, all_pages_short)
-                        filtered_pages = [page for page in results if page is not None]
-
-                    total_pages = len(filtered_pages)
-                    logging.info(f"{total_pages} pages meet the date criteria and will be processed.")
-                else:
-                    filtered_pages = all_pages_short
-                    logging.info("No date filtering applied.")
-
-                logging.info(f"Starting export of {len(filtered_pages)} pages")
-                page_counter = 0
-                for p in filtered_pages:
-                    if self.interrupted:
-                        logging.warning("Interrupting export of space")
-                        break
-                    page_counter += 1
-                    now = time.time()
-                    
-                    if now - last_log_time >= self.log_interval:
-                        estimated_time_remaining = (
-                            now - start_time) / page_counter * (total_pages - page_counter)
-                        logging.info(f"Exporting page {page_counter}/{total_pages} - Estimated time remaining: {estimated_time_remaining:.2f} seconds")
-                        last_log_time = now
-
-                    my_body_export_view = get_body_export_view(
-                        self.site, p["page_id"], self.user_name, self.api_token
-                    ).json()
-                    my_body_export_view_html = my_body_export_view["body"]["export_view"]["value"]
-                    my_body_export_view_name = p["pageTitle"]
-                    my_body_export_view_title = (
-                        p["pageTitle"]
-                        .replace("/", "-")
-                        .replace(",", "")
-                        .replace("&", "And")
-                        .replace(" ", "_")
-                        # added .replace(" ","_") so that filenames have _ as a separator
-                    )
-                    logging.debug(f"Getting page #{page_counter}/{len(all_pages_short)}, {my_body_export_view_title}, {p['page_id']}")
-                    my_body_export_view_labels = get_page_labels(
-                        self.site, p["page_id"], self.user_name, self.api_token
-                    )
-                    # my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
-                    my_page_url = f"{my_body_export_view['_links']['base']}"
-
-                    logging.debug(f"dump_html arg sphinx_compatible = {self.sphinx}")
-                    try:
-                        url, dumped_file_path = dump_html(
-                            self.site,
-                            my_body_export_view_html,
-                            my_body_export_view_title,
-                            p["page_id"],
-                            my_outdir_base,
-                            my_outdir_content,
-                            my_body_export_view_labels,
-                            p["parentId"],
-                            self.user_name,
-                            self.api_token,
-                            self.sphinx,
-                            self.tags,
-                            arg_html_output=self.html,
-                            arg_rst_output=self.rst,
-                        )
-                        dumped_file_paths[my_body_export_view_title] = (p["page_id"], url, dumped_file_path, self.space, self.site)
-                    except Exception as e:
-                        logging.error(f"Error exporting page {p['page_id']}: {e}")
-                        continue
+        for space_key in space_keys:
+            if self.interrupted:
+                logging.warning("Interrupting export of spaces")
+                return {}
+            logging.info(f"Exporting space {space_key}")
+            dumped_file_paths = self._export_space(space_key, all_spaces_short)
             all_dumped_file_paths.update(dumped_file_paths)
         end_time = time.time()
         elapsed_time = end_time - start_time
