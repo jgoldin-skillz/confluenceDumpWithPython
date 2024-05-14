@@ -5,6 +5,7 @@ import time
 import logging
 from dateutil import parser
 from datetime import datetime
+from datetime import timezone
 from confluence_dump.myModules import get_page_last_modified, get_page_name, get_body_export_view, get_page_parent, mk_outdirs, get_page_labels, dump_html, get_spaces_all, get_space_title, get_pages_from_space, get_page_properties_children
 
 
@@ -223,10 +224,10 @@ class ConfluenceExporter:
                     p for p in all_pages_short
                     if (not self.start_date or parser.isoparse(get_page_last_modified(
                         self.site, p["page_id"], self.user_name, self.api_token
-                    )) >= self.start_date)
+                    )).replace(tzinfo=timezone.utc) >= self.start_date)
                     and (not self.end_date or parser.isoparse(get_page_last_modified(
                         self.site, p["page_id"], self.user_name, self.api_token
-                    )) <= self.end_date)
+                    )).replace(tzinfo=timezone.utc) <= self.end_date)
                 ]
                 logging.info(f"{len(filtered_pages)} pages meet the date criteria and will be processed.")
             else:
