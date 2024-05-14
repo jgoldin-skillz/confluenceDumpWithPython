@@ -153,7 +153,7 @@ class ConfluenceExporter:
         i = 0
         for n in all_spaces_full:
             if self.interrupted:
-                logging.warning("Interrupting export space")
+                logging.warning("Interrupting export of space")
                 break
             i = i + 1
             all_spaces_short.append(
@@ -201,7 +201,7 @@ class ConfluenceExporter:
             i = 0
             for n in all_pages_full:
                 if self.interrupted:
-                    logging.warning("Interrupting export space")
+                    logging.warning("Interrupting export of space")
                     break
                 i = i + 1
                 all_pages_short.append(
@@ -224,6 +224,9 @@ class ConfluenceExporter:
             if self.start_date or self.end_date:
                 filtered_pages = []
                 for p in all_pages_short:
+                    if self.interrupted:
+                        logging.warning("Interrupting export of space")
+                        break
                     now = time.time()
                     if now - last_log_time >= self.log_interval:
                         logging.info(f"Processing page filtering at {len(filtered_pages)} pages so far. Time elapsed: {now - start_time:.2f} seconds")
@@ -244,6 +247,9 @@ class ConfluenceExporter:
 
             logging.info(f"Starting export of {len(filtered_pages)} pages")
             for p in filtered_pages:
+                if self.interrupted:
+                    logging.warning("Interrupting export of space")
+                    break
                 page_counter += 1
                 now = time.time()
                 
