@@ -146,6 +146,8 @@ class ConfluenceExporter:
         global last_log_time
         start_time = time.time()
         last_log_time = start_time
+        global filtered_pages_count
+        filtered_pages_count = 0
         # Update attributes with kwargs if provided
         for key, value in kwargs.items():
             setattr(self, key, value)
