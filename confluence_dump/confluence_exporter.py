@@ -243,12 +243,13 @@ class ConfluenceExporter:
                     
                     page_counter += 1
 
-                logging.info(f"{len(filtered_pages)} pages meet the date criteria and will be processed.")
+                total_pages = len(filtered_pages)
+                logging.info(f"{total_pages} pages meet the date criteria and will be processed.")
             else:
                 filtered_pages = all_pages_short
                 logging.info("No date filtering applied.")
 
-            logging.info(f"Starting export of {len(filtered_pages)} pages")
+            logging.info(f"Starting export of {total_pages} pages")
             for p in filtered_pages:
                 if self.interrupted:
                     logging.warning("Interrupting export of space")
