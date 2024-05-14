@@ -313,3 +313,183 @@ class ConfluenceExporter:
         elapsed_time = end_time - start_time
         logging.info(f"Done! Exporting space took {elapsed_time:.2f} seconds.")
         return dumped_file_paths
+
+
+    def export_spaces(self, space_keys, **kwargs):
+        start_time = time.time()
+        last_log_time = start_time
+        # Update attributes with kwargs if provided
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+        logging.info(f"Exporting multiple spaces (Sphinx set to {self.sphinx})")
+        
+        all_dumped_file_paths = {}
+        for space_key in space_keys:
+            logging.info(f"Exporting space {space_key}")
+            all_spaces_full = get_spaces_all(
+                self.site, self.user_name, self.api_token
+            )  # get a dump of all spaces
+            all_spaces_short = []  # initialize list for less detailed list of spaces
+            i = 0
+            for n in all_spaces_full:
+                if self.interrupted:
+                    logging.warning("Interrupting export of space")
+                    break
+                i = i + 1
+                all_spaces_short.append(
+                    {  # append the list of spaces
+                        "space_key": n["key"],
+                        "space_id": n["id"],
+                        "space_name": n["name"],
+                        "homepage_id": n["homepageId"],
+                        "spaceDescription": n["description"],
+                    }
+                )
+                if (
+                    (n["key"] == space_key)
+                    or n["key"] == str.upper(space_key)
+                    or n["key"] == str.lower(space_key)
+                ):
+                    logging.info("Found space: " + n["key"])
+                    space_id = n["id"]
+                    space_name = n["name"]
+                    current_parent = n["homepageId"]
+            my_outdir_content = os.path.join(
+                self.outdir, f"{space_id}-{space_name}"
+            )
+            os.makedirs(my_outdir_content, exist_ok=True)
+            if self.sphinx is False:
+                my_outdir_base = my_outdir_content
+
+            # print("my_outdir_base: " + my_outdir_base)
+            # print("my_outdir_content: " + my_outdir_content)
+
+            if (
+                space_key == "" or space_key is None
+            ):  # if the supplied space key can't be found
+                logging.error("Could not find Space Key in this site")
+            else:
+                space_title = get_space_title(
+                    self.site, space_id, self.user_name, self.api_token
+                )
+                #
+                # get list of pages from space
+                #
+                all_pages_full = get_pages_from_space(
+                    self.site, space_id, self.user_name, self.api_token
+                )
+                all_pages_short = []
+                i = 0
+                for n in all_pages_full:
+                    if self.interrupted:
+                        logging.warning("Interrupting export of space")
+                        break
+                    i = i + 1
+                    all_pages_short.append(
+                        {
+                            "page_id": n["id"],
+                            "pageTitle": n["title"],
+                            "parentId": n["parentId"],
+                            "space_id": n["spaceId"],
+                        }
+                    )
+                # put it all together
+                logging.info(f"{len(all_pages_short)} pages to export")
+                page_counter = 0
+                total_pages = len(all_pages_short)
+                dumped_file_paths = {}
+                # Filter pages based on date criteria if start_date or end_date are provided
+                start_time = time.time()
+                last_log_time = start_time
+                page_counter = 0
+                if self.start_date or self.end_date:
+                    filtered_pages = []
+                    for p in all_pages_short:
+                        if self.interrupted:
+                            logging.warning("Interrupting export of space")
+                            break
+                        now = time.time()
+                        if now - last_log_time >= self.log_interval:
+                            estimated_time_remaining = (now - start_time) / (page_counter + 1) * (total_pages - page_counter - 1)
+                            logging.info(f"Processing page {page_counter}/{total_pages} for {len(filtered_pages)} filtered pages so far. Time elapsed: {now - start_time:.2f} seconds, estimated time remaining: {estimated_time_remaining:.2f} seconds")
+                            last_log_time = now
+
+                        last_modified_str = get_page_last_modified(
+                            self.site, p["page_id"], self.user_name, self.api_token
+                        )
+                        last_modified = parser.isoparse(last_modified_str).replace(tzinfo=timezone.utc)
+                        
+                        if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
+                            filtered_pages.append(p)
+
+                        page_counter += 1
+
+                    total_pages = len(filtered_pages)
+                    logging.info(f"{total_pages} pages meet the date criteria and will be processed.")
+                else:
+                    filtered_pages = all_pages_short
+                    logging.info("No date filtering applied.")
+
+                logging.info(f"Starting export of {len(filtered_pages)} pages")
+                for p in filtered_pages:
+                    if self.interrupted:
+                        logging.warning("Interrupting export of space")
+                        break
+                    page_counter += 1
+                    now = time.time()
+                    
+                    if now - last_log_time >= self.log_interval:
+                        estimated_time_remaining = (
+                            now - start_time) / page_counter * (total_pages - page_counter)
+                        logging.info(f"Exporting page {page_counter}/{total_pages} - Estimated time remaining: {estimated_time_remaining:.2f} seconds")
+                        last_log_time = now
+
+                    my_body_export_view = get_body_export_view(
+                        self.site, p["page_id"], self.user_name, self.api_token
+                    ).json()
+                    my_body_export_view_html = my_body_export_view["body"]["export_view"]["value"]
+                    my_body_export_view_name = p["pageTitle"]
+                    my_body_export_view_title = (
+                        p["pageTitle"]
+                        .replace("/", "-")
+                        .replace(",", "")
+                        .replace("&", "And")
+                        .replace(" ", "_")
+                        # added .replace(" ","_") so that filenames have _ as a separator
+                    )
+                    logging.debug(f"Getting page #{page_counter}/{len(all_pages_short)}, {my_body_export_view_title}, {p['page_id']}")
+                    my_body_export_view_labels = get_page_labels(
+                        self.site, p["page_id"], self.user_name, self.api_token
+                    )
+                    # my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
+                    my_page_url = f"{my_body_export_view['_links']['base']}"
+
+                    logging.debug(f"dump_html arg sphinx_compatible = {self.sphinx}")
+                    try:
+                        url, dumped_file_path = dump_html(
+                            self.site,
+                            my_body_export_view_html,
+                            my_body_export_view_title,
+                            p["page_id"],
+                            my_outdir_base,
+                            my_outdir_content,
+                            my_body_export_view_labels,
+                            p["parentId"],
+                            self.user_name,
+                            self.api_token,
+                            self.sphinx,
+                            self.tags,
+                            arg_html_output=self.html,
+                            arg_rst_output=self.rst,
+                        )
+                        dumped_file_paths[my_body_export_view_title] = (p["page_id"], url, dumped_file_path, self.space, self.site)
+                    except Exception as e:
+                        logging.error(f"Error exporting page {p['page_id']}: {e}")
+                        continue
+            all_dumped_file_paths.update(dumped_file_paths)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        logging.info(f"Done! Exporting spaces took {elapsed_time:.2f} seconds.")
+        return all_dumped_file_paths
+
