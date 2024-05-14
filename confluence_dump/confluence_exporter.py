@@ -35,6 +35,8 @@ class ConfluenceExporter:
         self.showlabels = showlabels
         self.log_interval = log_interval
         self.interrupted = False
+        self.start_date = start_date
+        self.end_date = end_date
         signal.signal(signal.SIGINT, self.signal_handler)
 
         # Get API credentials from arguments or environment variables
