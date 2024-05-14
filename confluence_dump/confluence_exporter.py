@@ -40,6 +40,9 @@ class ConfluenceExporter:
         self.start_date = start_date
         self.end_date = end_date
         signal.signal(signal.SIGINT, self.signal_handler)
+        
+        global interrupted
+        interrupted = False
 
         # Get API credentials from arguments or environment variables
         self.user_name = api_username or os.environ.get("atlassianUserEmail")
