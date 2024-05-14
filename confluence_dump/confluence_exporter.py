@@ -230,12 +230,13 @@ class ConfluenceExporter:
 
             def filter_page(p):
                 global last_log_time
+                global filtered_pages_count
                 if self.interrupted:
                     return None
                 now = time.time()
                 if now - last_log_time >= self.log_interval:
                     estimated_time_remaining = (now - start_time) / (page_counter + 1) * (total_pages - page_counter - 1)
-                    logging.info(f"Processing page {page_counter}/{total_pages} for {len(filtered_pages)} filtered pages so far. Time elapsed: {now - start_time:.2f} seconds, estimated time remaining: {estimated_time_remaining:.2f} seconds")
+                    logging.info(f"Processing page {page_counter}/{total_pages} for {filtered_pages_count} filtered pages so far. Time elapsed: {now - start_time:.2f} seconds, estimated time remaining: {estimated_time_remaining:.2f} seconds")
                     last_log_time = now
 
                 last_modified_str = get_page_last_modified(
@@ -247,6 +248,7 @@ class ConfluenceExporter:
                     return p
                 return None
 
+            filtered_pages_count = len(filtered_pages)
             if self.start_date or self.end_date:
                 with ThreadPoolExecutor(max_workers=4) as executor:
                     results = list(executor.map(filter_page, all_pages_short))
