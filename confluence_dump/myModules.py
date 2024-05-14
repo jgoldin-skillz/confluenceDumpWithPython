@@ -8,6 +8,7 @@ import sys
 import pypandoc
 from PIL import Image
 import re
+from datetime import datetime
 
 """
 Arguments needed to run these functions centrally:
@@ -118,6 +119,17 @@ def get_page_parent(arg_site,arg_page_id,arg_username,arg_api_token):
     server_url = f"https://{arg_site}.atlassian.net/wiki/api/v2/pages/{arg_page_id}"
     response = requests.get(server_url, auth=(arg_username, arg_api_token),timeout=30)
     return(response.json()['parentId'])
+
+def get_page_last_modified(arg_site,arg_page_id,arg_username,arg_api_token):
+    server_url = f"https://{arg_site}.atlassian.net/wiki/rest/api/content/{arg_page_id}?expand=history.lastUpdated"
+    response = requests.get(server_url, auth=(arg_username, arg_api_token),timeout=30)
+    data = response.json()
+    # Check if 'lastUpdated' exists and is not empty
+    last_updated = data.get('history', {}).get('lastUpdated')
+    if last_updated:
+        return last_updated['when']
+    # Fallback to 'createdDate' if 'lastUpdated' is not available
+    return data['history']['createdDate']
 
 def remove_illegal_characters(input):
     return re.sub(r'[^\w_\.\- ]+', '_', input)

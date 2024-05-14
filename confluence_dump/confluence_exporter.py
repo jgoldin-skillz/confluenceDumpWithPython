@@ -3,6 +3,7 @@ import json
 import signal
 import time
 import logging
+from datetime import datetime
 from confluence_dump.myModules import get_page_name, get_body_export_view, get_page_parent, mk_outdirs, get_page_labels, dump_html, get_spaces_all, get_space_title, get_pages_from_space, get_page_properties_children
 
 
@@ -20,6 +21,8 @@ class ConfluenceExporter:
         api_username=None,
         api_token=None,
         log_interval=10,  # Log progress every 10 seconds
+        start_date: datetime = None,
+        end_date: datetime = None
     ):
         self.site = site
         self.space = space
