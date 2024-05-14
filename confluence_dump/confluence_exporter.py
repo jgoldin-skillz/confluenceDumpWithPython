@@ -217,7 +217,6 @@ class ConfluenceExporter:
             page_counter = 0
             total_pages = len(all_pages_short)
             dumped_file_paths = {}
-
             # Filter pages based on date criteria if start_date or end_date are provided
             start_time = time.time()
             last_log_time = start_time
@@ -230,7 +229,8 @@ class ConfluenceExporter:
                         break
                     now = time.time()
                     if now - last_log_time >= self.log_interval:
-                        logging.info(f"Processing page {page_counter}/{total_pages} for {len(filtered_pages)} filtered pages so far. Time elapsed: {now - start_time:.2f} seconds")
+                        estimated_time_remaining = (now - start_time) / (page_counter + 1) * (total_pages - page_counter - 1)
+                        logging.info(f"Processing page {page_counter}/{total_pages} for {len(filtered_pages)} filtered pages so far. Time elapsed: {now - start_time:.2f} seconds, estimated time remaining: {estimated_time_remaining:.2f} seconds")
                         last_log_time = now
 
                     last_modified_str = get_page_last_modified(
