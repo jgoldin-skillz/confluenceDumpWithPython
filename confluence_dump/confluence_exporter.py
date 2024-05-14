@@ -25,7 +25,8 @@ class ConfluenceExporter:
         api_token=None,
         log_interval=10,  # Log progress every 10 seconds
         start_date: datetime = None,
-        end_date: datetime = None
+        end_date: datetime = None,
+        workers: int = 4
     ):
         self.site = site
         self.space = space
@@ -39,6 +40,7 @@ class ConfluenceExporter:
         self.interrupted = False
         self.start_date = start_date
         self.end_date = end_date
+        self.workers = workers
         signal.signal(signal.SIGINT, self.signal_handler)
         
         global interrupted
@@ -266,7 +268,7 @@ class ConfluenceExporter:
                 return None
 
             if self.start_date or self.end_date:
-                with ThreadPoolExecutor(max_workers=4) as executor:
+                with ThreadPoolExecutor(max_workers=self.workers) as executor:
                     results = list(executor.map(filter_page, all_pages_short))
                 filtered_pages = [page for page in results if page is not None]
                 total_pages = len(filtered_pages)
