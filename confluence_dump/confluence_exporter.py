@@ -220,7 +220,7 @@ class ConfluenceExporter:
                 last_modified = get_page_last_modified(
                     self.site, p["page_id"], self.user_name, self.api_token
                 )
-                last_modified_date = datetime.fromisoformat(last_modified)
+                last_modified_date = datetime.fromisoformat(last_modified.replace('Z', '+00:00'))
                 
                 if self.start_date and last_modified_date < self.start_date:
                     logging.info(f"Page {p['page_id']} was last modified on {last_modified_date}, which is before the start date {self.start_date}. Skipping.")
