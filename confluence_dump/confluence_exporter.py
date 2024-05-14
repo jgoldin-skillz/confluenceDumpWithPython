@@ -165,6 +165,7 @@ class ConfluenceExporter:
         all_spaces_short = []  # initialize list for less detailed list of spaces
         i = 0
         for n in all_spaces_full:
+            global interrupted
             if interrupted or self.interrupted:
                 logging.warning("Interrupting export of space")
                 return
