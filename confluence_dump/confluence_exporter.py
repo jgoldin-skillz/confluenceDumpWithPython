@@ -6,6 +6,7 @@ import logging
 from dateutil import parser
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+from humanfriendly import format_timespan
 from datetime import timezone
 from confluence_dump.myModules import get_page_last_modified, get_page_name, get_body_export_view, get_page_parent, mk_outdirs, get_page_labels, dump_html, get_spaces_all, get_space_title, get_pages_from_space, get_page_properties_children
 
@@ -146,7 +147,7 @@ class ConfluenceExporter:
             return None, None, None, None, None, None
         end_time = time.time()
         elapsed_time = end_time - start_time
-        logging.info(f"Done! Exporting single page took {elapsed_time:.2f} seconds.")
+        logging.info(f"Done! Exporting single page took {format_timespan(elapsed_time)}.")
         return my_body_export_view_title, page_id, url, dumped_file_path, self.space, self.site
 
     def export_space(self, **kwargs):
@@ -253,7 +254,7 @@ class ConfluenceExporter:
                 now = time.time()
                 if now - last_log_time >= self.log_interval:
                     estimated_time_remaining = (now - start_time) / (page_counter + 1) * (total_pages - page_counter - 1)
-                    logging.info(f"Processing page {page_counter}/{total_pages} for {filtered_pages_count} filtered pages so far. Time elapsed: {now - start_time:.2f} seconds, estimated time remaining: {estimated_time_remaining:.2f} seconds")
+                    logging.info(f"Processing page {page_counter}/{total_pages} for {filtered_pages_count} filtered pages so far. Time elapsed: {format_timespan(now - start_time)} , estimated time remaining: {format_timespan(estimated_time_remaining)}")
                     last_log_time = now
 
                 last_modified_str = get_page_last_modified(
@@ -289,7 +290,7 @@ class ConfluenceExporter:
                 if now - last_log_time >= self.log_interval:
                     estimated_time_remaining = (
                         now - start_time) / page_counter * (total_pages - page_counter)
-                    logging.info(f"Exporting page {page_counter}/{total_pages} - Estimated time remaining: {estimated_time_remaining:.2f} seconds")
+                    logging.info(f"Exporting page {page_counter}/{total_pages} - Estimated time remaining: {format_timespan(estimated_time_remaining)}")
                     last_log_time = now
 
                 my_body_export_view = get_body_export_view(
@@ -336,5 +337,5 @@ class ConfluenceExporter:
                     continue
         end_time = time.time()
         elapsed_time = end_time - start_time
-        logging.info(f"Done! Exporting space took {elapsed_time:.2f} seconds.")
+        logging.info(f"Done! Exporting space took {format_timespan(elapsed_time)}.")
         return dumped_file_paths
