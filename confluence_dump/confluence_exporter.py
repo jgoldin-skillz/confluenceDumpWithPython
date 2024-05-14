@@ -4,6 +4,7 @@ import signal
 import time
 import logging
 from dateutil import parser
+from datetime import datetime
 from confluence_dump.myModules import get_page_last_modified, get_page_name, get_body_export_view, get_page_parent, mk_outdirs, get_page_labels, dump_html, get_spaces_all, get_space_title, get_pages_from_space, get_page_properties_children
 
 
