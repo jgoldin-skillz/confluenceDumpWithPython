@@ -8,7 +8,6 @@ import sys
 import pypandoc
 from PIL import Image
 import re
-from datetime import datetime
 
 """
 Arguments needed to run these functions centrally:

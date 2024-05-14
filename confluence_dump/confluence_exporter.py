@@ -4,7 +4,7 @@ import signal
 import time
 import logging
 from datetime import datetime
-from confluence_dump.myModules import get_page_name, get_body_export_view, get_page_parent, mk_outdirs, get_page_labels, dump_html, get_spaces_all, get_space_title, get_pages_from_space, get_page_properties_children
+from confluence_dump.myModules import get_page_last_modified, get_page_name, get_body_export_view, get_page_parent, mk_outdirs, get_page_labels, dump_html, get_spaces_all, get_space_title, get_pages_from_space, get_page_properties_children
 
 
 class ConfluenceExporter:
@@ -55,6 +55,20 @@ class ConfluenceExporter:
 
         logging.info(f"Exporting a single page (Sphinx set to {self.sphinx})")
         page_id = page_id
+        
+        last_modified = get_page_last_modified(
+            self.site, page_id, self.user_name, self.api_token
+        )
+        last_modified_date = datetime.fromisoformat(last_modified)
+        
+        if self.start_date and last_modified_date < self.start_date:
+            logging.info(f"Page {page_id} was last modified on {last_modified_date}, which is before the start date {self.start_date}. Skipping.")
+            return
+        
+        if self.end_date and last_modified_date > self.end_date:
+            logging.info(f"Page {page_id} was last modified on {last_modified_date}, which is after the end date {self.end_date}. Skipping.")
+            return
+        
         page_name = get_page_name(
             self.site, page_id, self.user_name, self.api_token
         )
@@ -202,6 +216,20 @@ class ConfluenceExporter:
             for p in all_pages_short:
                 page_counter += 1
                 now = time.time()
+                
+                last_modified = get_page_last_modified(
+                    self.site, p["page_id"], self.user_name, self.api_token
+                )
+                last_modified_date = datetime.fromisoformat(last_modified)
+                
+                if self.start_date and last_modified_date < self.start_date:
+                    logging.info(f"Page {p["page_id"]} was last modified on {last_modified_date}, which is before the start date {self.start_date}. Skipping.")
+                    return
+                
+                if self.end_date and last_modified_date > self.end_date:
+                    logging.info(f"Page {p["page_id"]} was last modified on {last_modified_date}, which is after the end date {self.end_date}. Skipping.")
+                    return
+                
                 if now - last_log_time >= self.log_interval:
                     estimated_time_remaining = (
                         now - start_time) / page_counter * (total_pages - page_counter)
