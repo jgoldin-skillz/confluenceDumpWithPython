@@ -219,16 +219,24 @@ class ConfluenceExporter:
             dumped_file_paths = {}
 
             # Filter pages based on date criteria if start_date or end_date are provided
+            start_time = time.time()
+            last_log_time = start_time
             if self.start_date or self.end_date:
-                filtered_pages = [
-                    p for p in all_pages_short
-                    if (not self.start_date or parser.isoparse(get_page_last_modified(
+                filtered_pages = []
+                for p in all_pages_short:
+                    now = time.time()
+                    if now - last_log_time >= self.log_interval:
+                        logging.info(f"Processing page filtering at {len(filtered_pages)} pages so far. Time elapsed: {now - start_time:.2f} seconds")
+                        last_log_time = now
+
+                    last_modified_str = get_page_last_modified(
                         self.site, p["page_id"], self.user_name, self.api_token
-                    )).replace(tzinfo=timezone.utc) >= self.start_date)
-                    and (not self.end_date or parser.isoparse(get_page_last_modified(
-                        self.site, p["page_id"], self.user_name, self.api_token
-                    )).replace(tzinfo=timezone.utc) <= self.end_date)
-                ]
+                    )
+                    last_modified = parser.isoparse(last_modified_str).replace(tzinfo=timezone.utc)
+                    
+                    if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
+                        filtered_pages.append(p)
+
                 logging.info(f"{len(filtered_pages)} pages meet the date criteria and will be processed.")
             else:
                 filtered_pages = all_pages_short
