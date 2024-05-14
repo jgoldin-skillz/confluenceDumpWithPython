@@ -284,37 +284,37 @@ class ConfluenceExporter:
                 if self.interrupted:
                     logging.warning("Interrupting export of space")
                     return
-                page_counter += 1
-                now = time.time()
-                
-                if now - last_log_time >= self.log_interval:
-                    estimated_time_remaining = (
-                        now - start_time) / page_counter * (total_pages - page_counter)
-                    logging.info(f"Exporting page {page_counter}/{total_pages} - Estimated time remaining: {format_timespan(estimated_time_remaining)}")
-                    last_log_time = now
-
-                my_body_export_view = get_body_export_view(
-                    self.site, p["page_id"], self.user_name, self.api_token
-                ).json()
-                my_body_export_view_html = my_body_export_view["body"]["export_view"]["value"]
-                my_body_export_view_name = p["pageTitle"]
-                my_body_export_view_title = (
-                    p["pageTitle"]
-                    .replace("/", "-")
-                    .replace(",", "")
-                    .replace("&", "And")
-                    .replace(" ", "_")
-                    # added .replace(" ","_") so that filenames have _ as a separator
-                )
-                logging.debug(f"Getting page #{page_counter}/{len(all_pages_short)}, {my_body_export_view_title}, {p['page_id']}")
-                my_body_export_view_labels = get_page_labels(
-                    self.site, p["page_id"], self.user_name, self.api_token
-                )
-                # my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
-                my_page_url = f"{my_body_export_view['_links']['base']}"
-
-                logging.debug(f"dump_html arg sphinx_compatible = {self.sphinx}")
                 try:
+                    page_counter += 1
+                    now = time.time()
+                    
+                    if now - last_log_time >= self.log_interval:
+                        estimated_time_remaining = (
+                            now - start_time) / page_counter * (total_pages - page_counter)
+                        logging.info(f"Exporting page {page_counter}/{total_pages} - Estimated time remaining: {format_timespan(estimated_time_remaining)}")
+                        last_log_time = now
+
+                    my_body_export_view = get_body_export_view(
+                        self.site, p["page_id"], self.user_name, self.api_token
+                    ).json()
+                    my_body_export_view_html = my_body_export_view["body"]["export_view"]["value"]
+                    my_body_export_view_name = p["pageTitle"]
+                    my_body_export_view_title = (
+                        p["pageTitle"]
+                        .replace("/", "-")
+                        .replace(",", "")
+                        .replace("&", "And")
+                        .replace(" ", "_")
+                        # added .replace(" ","_") so that filenames have _ as a separator
+                    )
+                    logging.debug(f"Getting page #{page_counter}/{len(all_pages_short)}, {my_body_export_view_title}, {p['page_id']}")
+                    my_body_export_view_labels = get_page_labels(
+                        self.site, p["page_id"], self.user_name, self.api_token
+                    )
+                    # my_body_export_view_labels = ",".join(myModules.get_page_labels(atlassian_site,p['page_id'],user_name,api_token))
+                    my_page_url = f"{my_body_export_view['_links']['base']}"
+
+                    logging.debug(f"dump_html arg sphinx_compatible = {self.sphinx}")
                     url, dumped_file_path = dump_html(
                         self.site,
                         my_body_export_view_html,
