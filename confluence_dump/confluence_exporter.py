@@ -254,7 +254,7 @@ class ConfluenceExporter:
                 now = time.time()
                 if now - last_log_time >= self.log_interval:
                     estimated_time_remaining = (now - start_time) / (page_counter + 1) * (total_pages - page_counter - 1)
-                    logging.info(f"Processing page {page_counter}/{total_pages} for {filtered_pages_count} filtered pages so far. Time elapsed: {format_timespan(now - start_time)} , estimated time remaining: {format_timespan(estimated_time_remaining)}")
+                    logging.info(f"Processing page {page_counter}/{total_pages} for {filtered_pages_count} filtered pages so far. Time elapsed: {format_timespan(now - start_time)}, estimated time remaining: {format_timespan(estimated_time_remaining)}.")
                     last_log_time = now
 
                 last_modified_str = get_page_last_modified(
