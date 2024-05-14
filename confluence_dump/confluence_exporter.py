@@ -216,22 +216,27 @@ class ConfluenceExporter:
             page_counter = 0
             total_pages = len(all_pages_short)
             dumped_file_paths = {}
-            for p in all_pages_short:
+
+            # Filter pages based on date criteria if start_date or end_date are provided
+            if self.start_date or self.end_date:
+                filtered_pages = [
+                    p for p in all_pages_short
+                    if (not self.start_date or parser.isoparse(get_page_last_modified(
+                        self.site, p["page_id"], self.user_name, self.api_token
+                    )) >= self.start_date)
+                    and (not self.end_date or parser.isoparse(get_page_last_modified(
+                        self.site, p["page_id"], self.user_name, self.api_token
+                    )) <= self.end_date)
+                ]
+                logging.info(f"{len(filtered_pages)} pages meet the date criteria and will be processed.")
+            else:
+                filtered_pages = all_pages_short
+                logging.info("No date filtering applied.")
+
+            logging.info(f"Starting export of {len(filtered_pages)} pages")
+            for p in filtered_pages:
                 page_counter += 1
                 now = time.time()
-                
-                last_modified = get_page_last_modified(
-                    self.site, p["page_id"], self.user_name, self.api_token
-                )
-                last_modified_date = parser.isoparse(last_modified)
-                
-                if self.start_date and last_modified_date < self.start_date:
-                    logging.info(f"Page {p['page_id']} was last modified on {last_modified_date}, which is before the start date {self.start_date}. Skipping.")
-                    return
-                
-                if self.end_date and last_modified_date > self.end_date:
-                    logging.info(f"Page {p['page_id']} was last modified on {last_modified_date}, which is after the end date {self.end_date}. Skipping.")
-                    return
                 
                 if now - last_log_time >= self.log_interval:
                     estimated_time_remaining = (
