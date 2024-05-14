@@ -221,6 +221,7 @@ class ConfluenceExporter:
             # Filter pages based on date criteria if start_date or end_date are provided
             start_time = time.time()
             last_log_time = start_time
+            page_counter = 0
             if self.start_date or self.end_date:
                 filtered_pages = []
                 for p in all_pages_short:
@@ -229,7 +230,7 @@ class ConfluenceExporter:
                         break
                     now = time.time()
                     if now - last_log_time >= self.log_interval:
-                        logging.info(f"Processing page filtering at {len(filtered_pages)} pages so far. Time elapsed: {now - start_time:.2f} seconds")
+                        logging.info(f"Processing page {page_counter}/{total_pages} for {len(filtered_pages)} filtered pages so far. Time elapsed: {now - start_time:.2f} seconds")
                         last_log_time = now
 
                     last_modified_str = get_page_last_modified(
@@ -239,6 +240,8 @@ class ConfluenceExporter:
                     
                     if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
                         filtered_pages.append(p)
+                    
+                    page_counter += 1
 
                 logging.info(f"{len(filtered_pages)} pages meet the date criteria and will be processed.")
             else:
