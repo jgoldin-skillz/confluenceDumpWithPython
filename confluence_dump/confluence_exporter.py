@@ -225,28 +225,30 @@ class ConfluenceExporter:
             start_time = time.time()
             last_log_time = start_time
             page_counter = 0
+            from concurrent.futures import ThreadPoolExecutor
+
+            def filter_page(p):
+                if self.interrupted:
+                    return None
+                now = time.time()
+                if now - last_log_time >= self.log_interval:
+                    estimated_time_remaining = (now - start_time) / (page_counter + 1) * (total_pages - page_counter - 1)
+                    logging.info(f"Processing page {page_counter}/{total_pages} for {len(filtered_pages)} filtered pages so far. Time elapsed: {now - start_time:.2f} seconds, estimated time remaining: {estimated_time_remaining:.2f} seconds")
+                    last_log_time = now
+
+                last_modified_str = get_page_last_modified(
+                    self.site, p["page_id"], self.user_name, self.api_token
+                )
+                last_modified = parser.isoparse(last_modified_str).replace(tzinfo=timezone.utc)
+                
+                if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
+                    return p
+                return None
+
             if self.start_date or self.end_date:
-                filtered_pages = []
-                for p in all_pages_short:
-                    if self.interrupted:
-                        logging.warning("Interrupting export of space")
-                        break
-                    now = time.time()
-                    if now - last_log_time >= self.log_interval:
-                        estimated_time_remaining = (now - start_time) / (page_counter + 1) * (total_pages - page_counter - 1)
-                        logging.info(f"Processing page {page_counter}/{total_pages} for {len(filtered_pages)} filtered pages so far. Time elapsed: {now - start_time:.2f} seconds, estimated time remaining: {estimated_time_remaining:.2f} seconds")
-                        last_log_time = now
-
-                    last_modified_str = get_page_last_modified(
-                        self.site, p["page_id"], self.user_name, self.api_token
-                    )
-                    last_modified = parser.isoparse(last_modified_str).replace(tzinfo=timezone.utc)
-                    
-                    if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
-                        filtered_pages.append(p)
-
-                    page_counter += 1
-
+                with ThreadPoolExecutor(max_workers=4) as executor:
+                    results = list(executor.map(filter_page, all_pages_short))
+                filtered_pages = [page for page in results if page is not None]
                 total_pages = len(filtered_pages)
                 logging.info(f"{total_pages} pages meet the date criteria and will be processed.")
             else:
@@ -254,6 +256,7 @@ class ConfluenceExporter:
                 logging.info("No date filtering applied.")
 
             logging.info(f"Starting export of {len(filtered_pages)} pages")
+            page_counter = 0
             for p in filtered_pages:
                 if self.interrupted:
                     logging.warning("Interrupting export of space")
@@ -405,10 +408,12 @@ class ConfluenceExporter:
                 page_counter = 0
                 if self.start_date or self.end_date:
                     filtered_pages = []
-                    for p in all_pages_short:
+                    from concurrent.futures import ThreadPoolExecutor
+
+                    def process_page(p):
                         if self.interrupted:
                             logging.warning("Interrupting export of space")
-                            break
+                            return None
                         now = time.time()
                         if now - last_log_time >= self.log_interval:
                             estimated_time_remaining = (now - start_time) / (page_counter + 1) * (total_pages - page_counter - 1)
@@ -421,9 +426,12 @@ class ConfluenceExporter:
                         last_modified = parser.isoparse(last_modified_str).replace(tzinfo=timezone.utc)
                         
                         if (not self.start_date or last_modified >= self.start_date) and (not self.end_date or last_modified <= self.end_date):
-                            filtered_pages.append(p)
+                            return p
+                        return None
 
-                        page_counter += 1
+                    with ThreadPoolExecutor(max_workers=4) as executor:
+                        results = executor.map(process_page, all_pages_short)
+                        filtered_pages = [page for page in results if page is not None]
 
                     total_pages = len(filtered_pages)
                     logging.info(f"{total_pages} pages meet the date criteria and will be processed.")
@@ -432,6 +440,7 @@ class ConfluenceExporter:
                     logging.info("No date filtering applied.")
 
                 logging.info(f"Starting export of {len(filtered_pages)} pages")
+                page_counter = 0
                 for p in filtered_pages:
                     if self.interrupted:
                         logging.warning("Interrupting export of space")
